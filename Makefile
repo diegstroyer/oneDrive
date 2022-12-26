@@ -34,7 +34,7 @@ locale_update: ## Update locale
 	msgmerge --no-location --previous --silent --lang=ca_ES locale/ca/LC_MESSAGES/One\ Drive.po locale/One\ Drive.pot --output locale/ca/LC_MESSAGES/One\ Drive.po
 
 
-install: ## Install extansion
+install: ## Install extension
 	@rm -rf ~/.local/share/gnome-shell/extensions/onedrive\@diegomerida.com &&\
 	cp -R . ~/.local/share/gnome-shell/extensions/onedrive\@diegomerida.com
 

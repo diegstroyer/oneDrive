@@ -1,298 +1,117 @@
 #!/usr/bin/gjs
 
 imports.gi.versions.Gtk = '3.0';
+imports.gi.versions.WebKit2 = '4.1';
 
 const GLib = imports.gi.GLib;
 const Gtk = imports.gi.Gtk;
-const WebKit = imports.gi.WebKit2;
+const WebKit = imports.gi.WebKit2;Gtk
 const Mainloop = imports.mainloop;
-
-// const Lang = imports.lang;
-const GObject = imports.gi.GObject;
 
 Gtk.init(null);
 
-/* const WebBrowser = new Lang.Class({
-    Name: 'WebBrowser',
-    Extends: Gtk.Application,
+class WebBrowser extends Gtk.Application {
+  constructor() {
+    super({ application_id: 'OneDrive.login.WebBrowser' });
 
-    // Create the application itself
-    _init: function () {
-        this.parent({
-            application_id: 'OneDrive.login.WebBrowser'
-        });
+    this.inFile = `${GLib.get_tmp_dir()}/in`;
+    this.outFile = `${GLib.get_tmp_dir()}/out`;
 
-        this.inFile = GLib.get_tmp_dir() + "/in";
-        this.outFile = GLib.get_tmp_dir() + "/out";
+    this.connect('activate', () => this._onActivate());
+    this.connect('startup', () => this._onStartup());
+  }
 
-        // Connect 'activate' and 'startup' signals to the callback functions
-        this.connect('activate', () => this._onActivate())
-        this.connect('startup', () => this._onStartup())
-    },
+  _onActivate() {
+    this._window.present();
 
-    // Callback function for 'activate' signal 
-    _onActivate: function () {
-        // Present window when active
-        this._window.present();
+    GLib.spawn_command_line_async(
+      `onedrive --auth-files ${this.inFile}:${this.outFile} --logout`
+    );
 
-        GLib.spawn_command_line_async("onedrive --auth-files " + this.inFile + ":" + this.outFile + " --logout");
+    this.numeroTentativi = 0;
+    this._attendiIn = Mainloop.timeout_add(500, this.startLogin.bind(this));
+  }
 
-        this.numeroTentativi = 0;
-        this._attendiIn = Mainloop.timeout_add(500, this.startLogin.bind(this));
-    },
+  _onStartup() {
+    this._buildUI();
+    this._connectSignals();
+  }
 
-    // Callback function for 'startup' signal
-    _onStartup: function () {
-        // Build the UI
-        this._buildUI();
+  _buildUI() {
+    this._window = new Gtk.ApplicationWindow({
+      application: this,
+      window_position: Gtk.WindowPosition.CENTER,
+      default_height: 768,
+      default_width: 1024,
+      border_width: 0,
+      title: 'OneDrive login'
+    });
 
-        // Connect the UI signals
-        this._connectSignals();
-    },
+    this._webView = new WebKit.WebView();
 
-    // Build the application's UI
-    _buildUI: function () {
-        // Create the application window
-        this._window = new Gtk.ApplicationWindow({
-            application: this,
-            window_position: Gtk.WindowPosition.CENTER,
-            default_height: 768,
-            default_width: 1024,
-            border_width: 0,
-            title: "OneDrive login"
-        });
+    const scrolledWindow = new Gtk.ScrolledWindow({
+      hscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
+      vscrollbar_policy: Gtk.PolicyType.AUTOMATIC
+    });
+    scrolledWindow.add(this._webView);
 
-        // Create the WebKit WebView, our window to the web
-        this._webView = new WebKit.WebView();
+    const box = new Gtk.Box({
+      orientation: Gtk.Orientation.VERTICAL,
+      homogeneous: false,
+      spacing: 0
+    });
 
-        // Create a scrolled window to embed the WebView
-        let scrolledWindow = new Gtk.ScrolledWindow({
-            hscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
-            vscrollbar_policy: Gtk.PolicyType.AUTOMATIC
-        });
-        scrolledWindow.add(this._webView);
+    box.pack_start(scrolledWindow, true, true, 0);
+    this._window.add(box);
+    this._window.show_all();
+  }
 
-        // Create a box to organize everything in
-        let box = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            homogeneous: false,
-            spacing: 0
-        });
+  _connectSignals() {
+    this._webView.connect('notify::title', () => {
+      this._window.set_title(this._webView.title);
+    });
 
-        // Pack toolbar and scrolled window to the box
-        //box.pack_start(toolbar, false, true, 0);
-        box.pack_start(scrolledWindow, true, true, 0);
+    this._webView.connect('load_changed', (webView, loadEvent) => {
+      if (loadEvent !== WebKit.LoadEvent.COMMITTED) {
+        return;
+      }
+    });
+  }
 
-        // Add the box to the window
-        this._window.add(box);
-
-        // Show the window and all child widgets
-        this._window.show_all();
-    },
-
-    _connectSignals: function () {
-        
-        // Change the Window title when a new page is loaded
-        this._webView.connect('notify::title', () => {
-            this._window.set_title(this._webView.title);
-        });
-
-        // Update the url bar and buttons when a new page is loaded
-        this._webView.connect('load_changed', (webView, loadEvent) => {
-            if (loadEvent !== WebKit.LoadEvent.COMMITTED) {
-                return
-            }
-        });
-    },
-
-    startLogin()
-    {
-        if(this.numeroTentativi > 10)
-        {
-            print("Error in open file with uri");
-            this.quit();
-            return false;
-        }
-
-        let url = "";
-        try 
-        {
-            url = String(GLib.file_get_contents(this.inFile)[1]);
-            this._homeUrl = url;
-            this._webView.load_uri(this._homeUrl);
-
-            this._attendiOut = Mainloop.timeout_add(500, this.endLogin.bind(this));
-
-            return false;
-        } 
-        catch(ex)
-        {
-            this.numeroTentativi++;
-        }
-
-        return true;
-    },
-
-    endLogin()
-    {
-        if(this._webView.get_uri().indexOf("code=") === -1) return true;
-
-        let url = "";
-        try 
-        {
-            GLib.file_set_contents(this.outFile, this._webView.get_uri());
-            Mainloop.timeout_add(1000, function() { this.quit(); }.bind(this));
-        } 
-        catch(ex)
-        {
-            print(ex.message);
-        }
-
-        return false;
+  startLogin() {
+    if (this.numeroTentativi > 10) {
+      console.log('Error in open file with uri');
+      this.quit();
+      return false;
     }
-}); */
-
-const WebBrowser = GObject.registerClass({
-    Name: 'WebBrowser',
-    }, class WebBrowser
-    extends Gtk.Application {
-
-    // Create the application itself
-    _init() {
-        this.parent({
-            application_id: 'OneDrive.login.WebBrowser'
-        });
-
-        this.inFile = GLib.get_tmp_dir() + "/in";
-        this.outFile = GLib.get_tmp_dir() + "/out";
-
-        // Connect 'activate' and 'startup' signals to the callback functions
-        this.connect('activate', () => this._onActivate())
-        this.connect('startup', () => this._onStartup())
+  
+    let url = '';
+    try {
+      url = String(GLib.file_get_contents(this.inFile)[1]);
+      this._homeUrl = url;
+      this._webView.load_uri(this._homeUrl);
+  
+      this._attendiOut = Mainloop.timeout_add(500, this.endLogin.bind(this));
+  
+      return false;
+    } catch (ex) {
+      this.numeroTentativi++;
     }
-
-    // Callback function for 'activate' signal 
-    _onActivate() {
-        // Present window when active
-        this._window.present();
-
-        GLib.spawn_command_line_async("onedrive --auth-files " + this.inFile + ":" + this.outFile + " --logout");
-
-        this.numeroTentativi = 0;
-        this._attendiIn = Mainloop.timeout_add(500, this.startLogin.bind(this));
+  
+    return true;
+  }
+  
+  endLogin() {
+    if (this._webView.get_uri().indexOf('code=') === -1) return true;
+  
+    let url = '';
+    try {
+      GLib.file_set_contents(this.outFile, this._webView.get_uri());
+      Mainloop.timeout_add(1000, () => this.quit());
+    } catch (ex) {
+      console.log(ex.message);
     }
-
-    // Callback function for 'startup' signal
-    _onStartup() {
-        // Build the UI
-        this._buildUI();
-
-        // Connect the UI signals
-        this._connectSignals();
-    }
-
-    // Build the application's UI
-    _buildUI() {
-        // Create the application window
-        this._window = new Gtk.ApplicationWindow({
-            application: this,
-            window_position: Gtk.WindowPosition.CENTER,
-            default_height: 768,
-            default_width: 1024,
-            border_width: 0,
-            title: "OneDrive login"
-        });
-
-        // Create the WebKit WebView, our window to the web
-        this._webView = new WebKit.WebView();
-
-        // Create a scrolled window to embed the WebView
-        let scrolledWindow = new Gtk.ScrolledWindow({
-            hscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
-            vscrollbar_policy: Gtk.PolicyType.AUTOMATIC
-        });
-        scrolledWindow.add(this._webView);
-
-        // Create a box to organize everything in
-        let box = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            homogeneous: false,
-            spacing: 0
-        });
-
-        // Pack toolbar and scrolled window to the box
-        //box.pack_start(toolbar, false, true, 0);
-        box.pack_start(scrolledWindow, true, true, 0);
-
-        // Add the box to the window
-        this._window.add(box);
-
-        // Show the window and all child widgets
-        this._window.show_all();
-    }
-
-    _connectSignals() {
-        
-        // Change the Window title when a new page is loaded
-        this._webView.connect('notify::title', () => {
-            this._window.set_title(this._webView.title);
-        });
-
-        // Update the url bar and buttons when a new page is loaded
-        this._webView.connect('load_changed', (webView, loadEvent) => {
-            if (loadEvent !== WebKit.LoadEvent.COMMITTED) {
-                return
-            }
-        });
-    }
-
-    startLogin()
-    {
-        if(this.numeroTentativi > 10)
-        {
-            print("Error in open file with uri");
-            this.quit();
-            return false;
-        }
-
-        let url = "";
-        try 
-        {
-            url = String(GLib.file_get_contents(this.inFile)[1]);
-            this._homeUrl = url;
-            this._webView.load_uri(this._homeUrl);
-
-            this._attendiOut = Mainloop.timeout_add(500, this.endLogin.bind(this));
-
-            return false;
-        } 
-        catch(ex)
-        {
-            this.numeroTentativi++;
-        }
-
-        return true;
-    }
-
-    endLogin()
-    {
-        if(this._webView.get_uri().indexOf("code=") === -1) return true;
-
-        let url = "";
-        try 
-        {
-            GLib.file_set_contents(this.outFile, this._webView.get_uri());
-            Mainloop.timeout_add(1000, function() { this.quit(); }.bind(this));
-        } 
-        catch(ex)
-        {
-            print(ex.message);
-        }
-
-        return false;
-    }
-});
-
-// Run the application
-let app = new WebBrowser();
-app.run(ARGV);
+  
+    return false;
+  }
+}
