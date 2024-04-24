@@ -1,0 +1,41 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# Karachálios Stagkás Athanásios Nektários <nasos.karachalios.stagkas@proton.me>, 2024.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2022-11-09 17:21+0100\n"
+"PO-Revision-Date: 2024-04-24 16:12+0300\n"
+"Last-Translator: Αθανάσιος Νεκτάριος Καραχάλιος Στάγκας <nasos.karachalios.stagkas@proton.me>\n"
+"Language-Team: \n"
+"Language: el\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.4.2\n"
+
+msgid "One Drive"
+msgstr "One Drive"
+
+msgid "Login..."
+msgstr "Σύνδεση..."
+
+msgid "Show service status"
+msgstr "Εμφάνιση κατάστασης της υπηρεσίας"
+
+msgid "Show service process"
+msgstr "Εμφάνιση διαδικασίας υπηρεσίας"
+
+msgid "Open One Drive web site"
+msgstr "Άνοιγμα του ιστότοπου OneDrive"
+
+msgid "Open One Drive local folder"
+msgstr "Άνοιγμα τοπικού φακέλου OneDrive"
+
+msgid "Logout..."
+msgstr "Αποσύνδεση..."
